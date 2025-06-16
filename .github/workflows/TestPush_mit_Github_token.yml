@@ -1,0 +1,37 @@
+
+name: Test Push mit Github_token
+
+on:
+  workflow_dispatch:  # Manuell auslösbar
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Erstelle/ändere Datei
+        run: |
+          echo "Testlauf am $(date)" >> token-test.txt
+      - name: Commit & Push Datei
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:GITHUB_TOKEN)) {
+            Write-Host "❌ TOKEN ist leer oder nicht gesetzt!"
+            exit 1
+          }
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          # Neuen Branch erstellen oder überschreiben
+          git checkout -B auto-update
+          git add token-test.txt
+          git commit -m "Test token access [skip ci]" || echo "⚠️ Nichts zu committen"
+          $repo = "${{ github.repository }}"
+          $token = $env:GITHUB_TOKEN
+          git remote set-url origin "https://x-access-token:$token@github.com/$repo"
+          git push --set-upstream origin auto-update
